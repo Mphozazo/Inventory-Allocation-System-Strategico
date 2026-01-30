@@ -1,4 +1,4 @@
-# Inventory-Allocation-System-Strategico
+# Strategico - Inventory Allocation System
 
 ## Overview
 This project implements a concurrency-safe inventory allocation system in .NET 9 using ASP.NET Core Web API, EF Core, and PostgreSQL, packaged with Docker for easy deployment.
