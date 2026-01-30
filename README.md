@@ -69,10 +69,9 @@ Flow:
 | Transactions | Data safety | Latency |
 | Central allocation | Simple logic | Scalability |
 | Warehouse-as-tenant | Clean separation per warehouse | Header required for all requests
-| Optimistic concurrency | Performance | Retry logic |
+| Optimistic concurrency | Performance 
 
 ---
-
 ## Setup and Run
 
 ### Clone the repository
