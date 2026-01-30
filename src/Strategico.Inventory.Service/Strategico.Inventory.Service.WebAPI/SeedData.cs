@@ -46,7 +46,8 @@ public static class SeedData
                 ProductId = laptop.Id,
                 WarehouseId = warehouse.Id,
                 TotalQuantity = 100,
-                ReservedQuantity = 0
+                ReservedQuantity = 0,
+                Version = 1
             },
             new Stock
             {
@@ -54,7 +55,8 @@ public static class SeedData
                 ProductId = phone.Id,
                 WarehouseId = warehouse.Id,
                 TotalQuantity = 200,
-                ReservedQuantity = 0
+                ReservedQuantity = 0,
+                Version = 1
             }
         );
 

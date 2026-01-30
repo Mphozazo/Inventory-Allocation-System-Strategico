@@ -1,39 +1,56 @@
-using Strategico.Inventory.Api.Models;
-using Strategico.Inventory.Api.Services;
 using Microsoft.EntityFrameworkCore;
+using Strategico.Inventory.Api.Models;
 using Strategico.Inventory.Service.WebAPI.Models;
 
-namespace Strategico.Inventory.Api.Data;
-
-public class InventoryDbContext : DbContext
+namespace Strategico.Inventory.Api.Data
 {
-    private readonly IWarehouseProvider _warehouseProvider;
-
-    public InventoryDbContext(DbContextOptions<InventoryDbContext> options, IWarehouseProvider warehouseProvider)
-        : base(options)
+    public class InventoryDbContext : DbContext
     {
-        _warehouseProvider = warehouseProvider;
-    }
+        public InventoryDbContext(DbContextOptions<InventoryDbContext> options)
+            : base(options) { }
 
-    public DbSet<Warehouse> Warehouses => Set<Warehouse>();
-    public DbSet<Stock> Stocks => Set<Stock>();
-    public DbSet<Order> Orders => Set<Order>();
-    public DbSet<OrderLine> OrderLines => Set<OrderLine>();
-    public DbSet<Product> Products => Set<Product>();
+        public DbSet<Warehouse> Warehouses => Set<Warehouse>();
+        public DbSet<Product> Products => Set<Product>();
+        public DbSet<Stock> Stocks => Set<Stock>();
+        public DbSet<Order> Orders => Set<Order>();
+        public DbSet<OrderLine> OrderLines => Set<OrderLine>();
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<Stock>()
-            .HasQueryFilter(s => s.WarehouseId == _warehouseProvider.WarehouseId);
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<Stock>()
-            .HasIndex(s => new { s.ProductId, s.WarehouseId })
-            .IsUnique();
+            // Unique stock per product per warehouse
+            modelBuilder.Entity<Stock>()
+                .HasIndex(x => new { x.ProductId, x.WarehouseId })
+                .IsUnique();
 
-        modelBuilder.Entity<Stock>()
-            .Property(s => s.Version)
-            .IsRowVersion();
+            // Optimistic concurrency
+            modelBuilder.Entity<Stock>()
+                .Property(x => x.Version)
+                .IsConcurrencyToken();
 
-        base.OnModelCreating(modelBuilder);
+            // Default value for Version
+            modelBuilder.Entity<Stock>()
+                .Property(x => x.Version)
+                .HasDefaultValue(1);
+
+            // Relationships
+            modelBuilder.Entity<Stock>()
+                .HasOne<Warehouse>()
+                .WithMany()
+                .HasForeignKey(x => x.WarehouseId);
+
+            modelBuilder.Entity<Stock>()
+                .HasOne<Product>()
+                .WithMany()
+                .HasForeignKey(x => x.ProductId);
+
+            //Deletion cascade Order -> OrderLines
+            modelBuilder.Entity<Order>()
+                .HasMany(o => o.Lines)
+                .WithOne(l => l.Order)
+                .HasForeignKey(l => l.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+        }
     }
 }

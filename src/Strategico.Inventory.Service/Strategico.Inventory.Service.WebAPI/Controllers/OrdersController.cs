@@ -1,78 +1,111 @@
-using Strategico.Inventory.Api.Data;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Strategico.Inventory.Api.Data;
 using Strategico.Inventory.Api.Models;
+using Strategico.Inventory.Api.Services;
+using Strategico.Inventory.Service.WebAPI.Models;
 
-namespace Strategico.Inventory.Api.Controllers;
-
-[ApiController]
-[Route("api/v1/[controller]")]
-public class OrdersController : ControllerBase
+namespace Strategico.Inventory.Api.Controllers
 {
-    private readonly InventoryDbContext _db;
-
-    public OrdersController(InventoryDbContext db)
+    [ApiController]
+    [Route("api/orders")]
+    public class OrdersController : ControllerBase
     {
-        _db = db;
-    }
+        private readonly InventoryDbContext _db;
+        private readonly IWarehouseProvider _warehouseProvider;
 
-    [HttpPost]
-    public async Task<IActionResult> PlaceOrder(CreateOrderRequest req)
-    {
-        using var tx = await _db.Database.BeginTransactionAsync();
-        try
+        public OrdersController(
+            InventoryDbContext db,
+            IWarehouseProvider warehouseProvider)
         {
-            var rowsAffected = await _db.Database.ExecuteSqlRawAsync(@"
-                            UPDATE ""Stocks""
-                            SET ""ReservedQuantity"" = ""ReservedQuantity"" + {0}
-                            WHERE ""ProductId"" = {1}
-                            AND (""TotalQuantity"" - ""ReservedQuantity"") >= {0};
-                            ", req.Quantity, req.ProductId);
+            _db = db;
+            _warehouseProvider = warehouseProvider;
+        }
+        [HttpPost]
+        public async Task<IActionResult> PlaceOrder([FromBody] CreateOrderRequest request)
+        {
+            var warehouse = await _db.Warehouses.FirstOrDefaultAsync();
+            if (warehouse == null)
+                return BadRequest("No warehouse available");
 
+            // Start transaction
+            await using var tx = await _db.Database.BeginTransactionAsync();
 
-            if (rowsAffected == 0)
+            try
+            {
+                // Load stocks WITH tracking + locking
+                var stocks = await _db.Stocks
+                    .Where(s =>
+                        s.WarehouseId == warehouse.Id &&
+                        request.Lines.Select(l => l.ProductId).Contains(s.ProductId))
+                    .ToListAsync();
+
+                if (!stocks.Any())
+                    return BadRequest("No stock found for selected products");
+
+                // Validate availability
+                foreach (var line in request.Lines)
+                {
+                    var stock = stocks.FirstOrDefault(s => s.ProductId == line.ProductId);
+
+                    if (stock == null)
+                        return BadRequest($"Stock not found for product {line.ProductId}");
+
+                    if (stock.AvailableQuantity < line.Quantity)
+                        return BadRequest($"Insufficient stock for product {line.ProductId}");
+                }
+
+                // Create order aggregate
+                var order = new Order
+                {
+                    Id = Guid.NewGuid(),
+                    WarehouseId = warehouse.Id,
+                    CreatedAt = DateTime.UtcNow,
+                    Status = "Placed",
+                    Lines = new List<OrderLine>()
+                };
+
+                // Apply domain logic
+                foreach (var line in request.Lines)
+                {
+                    var stock = stocks.First(s => s.ProductId == line.ProductId);
+
+                    // concurrency tracked via Stock.Version (optimistic concurrency) 
+                    stock.ReservedQuantity += line.Quantity;   
+                    stock.Version += 1;                         
+
+                    order.Lines.Add(new OrderLine
+                    {
+                        Id = Guid.NewGuid(),
+                        OrderId = order.Id,
+                        ProductId = line.ProductId,
+                        Quantity = line.Quantity
+                    });
+                }
+
+                _db.Orders.Add(order);
+
+                await _db.SaveChangesAsync();   // atomic write
+                await tx.CommitAsync();         // commit transaction
+
+                return Ok(new
+                {
+                    OrderId = order.Id,
+                    Status = order.Status
+                });
+            }
+            catch (DbUpdateConcurrencyException)
             {
                 await tx.RollbackAsync();
-                return BadRequest("Insufficient stock in this warehouse");
+                return Conflict("Stock was modified by another transaction. Please retry.");
             }
-
-            var order = new Order
+            catch (Exception ex)
             {
-                Id = Guid.NewGuid(),
-                WarehouseId = _db.Stocks.Select(s => s.WarehouseId).First(),
-                CustomerId = req.CustomerId,
-                CreatedAt = DateTime.UtcNow,
-                Status = "CONFIRMED"
-            };
-
-            _db.Orders.Add(order);
-
-            _db.OrderLines.Add(new OrderLine
-            {
-                Id = Guid.NewGuid(),
-                OrderId = order.Id,
-                ProductId = req.ProductId,
-                Quantity = req.Quantity
-            });
-
-            await _db.SaveChangesAsync();
-            await tx.CommitAsync();
-
-            return Ok(new { orderId = order.Id });
+                await tx.RollbackAsync();
+                return StatusCode(500, ex.Message);
+            }
         }
-        catch (Exception ex)
-        {
-            // return error response and rollback 
-            await tx.RollbackAsync();
-            return StatusCode(500, "An error occurred while placing the order: " + ex.Message);
-        }
-        
     }
-}
 
-public class CreateOrderRequest
-{
-    public string CustomerId { get; set; } = string.Empty;
-    public Guid ProductId { get; set; }
-    public int Quantity { get; set; }
+
 }

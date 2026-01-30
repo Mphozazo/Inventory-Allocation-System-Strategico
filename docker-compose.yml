@@ -1,6 +1,3 @@
-version: '3.9'
-
-
 services:
   db:
     image: postgres:15
@@ -16,22 +13,27 @@ services:
     networks:
       - multitenant-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U inventory -d inventorydb"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
-    restart: unless-stopped 
+    restart: unless-stopped
 
   api:
     build:
-      dockerfile: ./src/Strategico.Inventory.Service/Strategico.Inventory.Service.WebAPI/Dockerfile
-    image: mphozazo/Inventory-api:1.0.0
-    container_name: Inventory-api
+      context: ./src/Strategico.Inventory.Service/Strategico.Inventory.Service.WebAPI
+      dockerfile: Dockerfile
+    image: mphozazo/inventory-api:1.0.0
+    container_name: inventory-api
     ports:
       - "8080:8080"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    environment:
+       DOTNET_ENVIRONMENT: Docker
+       ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=inventorydb;Username=inventory;Password=inventory"
     networks:
       - multitenant-network
     volumes:
@@ -49,4 +51,4 @@ networks:
     driver: bridge
 
 volumes:
-      postgres_data:
+  postgres_data:

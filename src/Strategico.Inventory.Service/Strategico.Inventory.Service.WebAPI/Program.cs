@@ -10,10 +10,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddScoped<IWarehouseProvider, WarehouseProvider>();
 
-// Program.cs (example - read connection from environment with fallback)
-var conn = builder.Configuration.GetConnectionString("InventoryConnection")
-           ?? Environment.GetEnvironmentVariable("InventoryConnection")
-           ?? "Host=localhost;Database=inventorydb;Username=inventory;Password=inventory";
+var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Production";
+
+builder.Configuration
+       .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+       .AddJsonFile($"appsettings.{env}.json", optional: true, reloadOnChange: true)
+       .AddEnvironmentVariables();
+
+var conn = builder.Configuration.GetConnectionString("DefaultConnection");
 
 builder.Services.AddDbContext<InventoryDbContext>(opts =>
     opts.UseNpgsql(conn));
@@ -24,7 +28,8 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+app.UseRouting();
+
 app.UseMiddleware<WarehouseMiddleware>();
 
 app.UseHttpsRedirection();

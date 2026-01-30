@@ -7,5 +7,6 @@ public class Order
     public Warehouse Warehouse { get; set; } = null!;
     public string CustomerId { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
-    public string Status { get; set; } = "CONFIRMED";
+    public string Status { get; set; } = "Placed";
+    public ICollection<OrderLine> Lines { get; set; } = new List<OrderLine>();
 }

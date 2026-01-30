@@ -15,7 +15,7 @@ public class WarehouseMiddleware
     {
         // Only apply to POST /api/orders
         if (context.Request.Method == HttpMethods.Post &&
-            context.Request.Path.StartsWithSegments("/api/orders"))
+            context.Request.Path.StartsWithSegments("/api/v1/orders"))
         {
             var header = context.Request.Headers["X-Warehouse-Id"].FirstOrDefault();
 
