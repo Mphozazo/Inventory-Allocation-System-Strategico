@@ -22,8 +22,8 @@ services:
 
   api:
     build:
-      context: ./src/Strategico.Inventory.Service/Strategico.Inventory.Service.WebAPI
-      dockerfile: Dockerfile
+      context: ./src/Strategico.Inventory.Service
+      dockerfile: ./Strategico.Inventory.Service.WebAPI/Dockerfile
     image: mphozazo/inventory-api:1.0.0
     container_name: inventory-api
     ports:

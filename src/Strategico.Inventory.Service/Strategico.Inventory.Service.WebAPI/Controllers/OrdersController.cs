@@ -8,7 +8,7 @@ using Strategico.Inventory.Service.WebAPI.Models;
 namespace Strategico.Inventory.Api.Controllers
 {
     [ApiController]
-    [Route("api/orders")]
+    [Route("api/v1/orders")]
     public class OrdersController : ControllerBase
     {
         private readonly InventoryDbContext _db;
