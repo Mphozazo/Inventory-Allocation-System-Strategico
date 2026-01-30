@@ -72,3 +72,50 @@ Flow:
 | Optimistic concurrency | Performance | Retry logic |
 
 ---
+
+## Setup and Run
+
+### Clone the repository
+```powershell
+git clone <your-repo-url>
+cd Inventory-Allocation-System-Strategico
+```
+
+### Run the application using Docker Compose
+This command will build the images and start the containers:
+```powershell
+docker compose up --build -d
+```
+
+### Stop and remove containers, networks, and volumes (Clean Start)
+```powershell
+docker compose down -v --remove-orphans
+```
+
+## Database
+The system uses PostgreSQL. Connection details are configured via `docker-compose.yml`:
+```yaml
+ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=inventorydb;Username=inventory;Password=inventory"
+```
+
+### Seed Data
+Seed data is automatically inserted on startup. This includes:
+- One Warehouse (`Main Warehouse`)
+- Products (`Laptop`, `Phone`)
+- Stock for each product in the warehouse
+
+
+## API Endpoints
+### Place an Order
+- **URL:** `/api/v1/orders`
+- **Method:** `POST`
+- **Body Example:**
+```json
+{
+  "lines": [
+    { "productId": "<LaptopId>", "quantity": 2 },
+    { "productId": "<PhoneId>", "quantity": 3 }
+  ]
+}
+```
+
