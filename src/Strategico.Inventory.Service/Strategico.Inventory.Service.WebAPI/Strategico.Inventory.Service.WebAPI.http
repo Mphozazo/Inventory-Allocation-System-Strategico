@@ -1,0 +1,6 @@
+@Strategico.Inventory.Service.WebAPI_HostAddress = http://localhost:5261
+
+GET {{Strategico.Inventory.Service.WebAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
