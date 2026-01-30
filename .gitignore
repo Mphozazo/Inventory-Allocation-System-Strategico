@@ -1,0 +1,12 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs/Inventory-Allocation-System-Strategico/CopilotIndices/17.14.1577.30250
+/.vs/Inventory-Allocation-System-Strategico/FileContentIndex
+/.vs
+/src/Strategico.Inventory.Service/Strategico.Inventory.Service.WebAPI/bin/Debug/net9.0
+/src/Strategico.Inventory.Service/Strategico.Inventory.Service.WebAPI/obj
+/src/Strategico.Inventory.Service/.vs/Strategico.Inventory.Service/v17
+/src/Strategico.Inventory.Service/.vs/Strategico.Inventory.Service/CopilotIndices/17.14.1577.30250
+/src/Strategico.Inventory.Service/.vs/Strategico.Inventory.Service
